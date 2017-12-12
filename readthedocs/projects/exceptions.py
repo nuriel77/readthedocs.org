@@ -1,4 +1,7 @@
-"""Project exceptions"""
+# -*- coding: utf-8 -*-
+"""Project exceptions."""
+
+from __future__ import division, print_function, unicode_literals
 
 from django.conf import settings
 from django.utils.translation import ugettext_noop as _
@@ -8,7 +11,7 @@ from readthedocs.doc_builder.exceptions import BuildEnvironmentError
 
 class ProjectConfigurationError(BuildEnvironmentError):
 
-    """Error raised trying to configure a project for build"""
+    """Error raised trying to configure a project for build."""
 
     NOT_FOUND = _(
         'A configuration file was not found. '
@@ -16,11 +19,12 @@ class ProjectConfigurationError(BuildEnvironmentError):
     )
 
     MULTIPLE_CONF_FILES = _(
-        "There are more than one conf.py file and none of them say doc "
+        'There are more than one conf.py file and none of them say doc '
         "in their path, we don't know which one use. Please, select "
-        "the correct one under the Advanced settings tab in the "
+        'the correct one under the Advanced settings tab in the '
         "project's Admin."
     )
+
 
 class RepositoryError(BuildEnvironmentError):
 
@@ -44,7 +48,8 @@ class RepositoryError(BuildEnvironmentError):
 
 class ProjectSpamError(Exception):
 
-    """Error raised when a project field has detected spam
+    """
+    Error raised when a project field has detected spam.
 
     This error is not raised to users, we use this for banning users in the
     background.

@@ -1,16 +1,22 @@
-from __future__ import absolute_import
+# -*- coding: utf-8 -*-
+from __future__ import (
+    absolute_import, division, print_function, unicode_literals)
+
 import json
+
 from django.test import TestCase
-from readthedocs.builds.constants import LATEST
-from readthedocs.projects.models import Project
-from rest_framework.reverse import reverse
 from django_dynamic_fixture import get
-from readthedocs.restapi.serializers import ProjectSerializer
+from mock import patch
+from rest_framework.reverse import reverse
+
+from readthedocs.builds.constants import LATEST
+from readthedocs.projects.exceptions import ProjectConfigurationError
+from readthedocs.projects.models import Project
 from readthedocs.rtd_tests.mocks.paths import fake_paths_by_regex
 
 
 class TestProject(TestCase):
-    fixtures = ["eric", "test_data"]
+    fixtures = ['eric', 'test_data']
 
     def setUp(self):
         self.client.login(username='eric', password='test')
@@ -50,7 +56,7 @@ class TestProject(TestCase):
         )
 
     def test_translation_delete(self):
-        """Ensure translation deletion doesn't cascade up to main project"""
+        """Ensure translation deletion doesn't cascade up to main project."""
         # In this scenario, a user has created a project and set the translation
         # to another project. If the user deletes this new project, the delete
         # operation shouldn't cascade up to the main project, and should instead
@@ -104,3 +110,42 @@ class TestProject(TestCase):
         self.pip.enable_epub_build = False
         with fake_paths_by_regex('\.epub$'):
             self.assertFalse(self.pip.has_epub(LATEST))
+
+    @patch('readthedocs.projects.models.Project.find')
+    def test_conf_file_found(self, find_method):
+        find_method.return_value = [
+            '/home/docs/rtfd/code/readthedocs.org/user_builds/pip/checkouts/latest/src/conf.py',
+        ]
+        self.assertEqual(
+            self.pip.conf_file(),
+            '/home/docs/rtfd/code/readthedocs.org/user_builds/pip/checkouts/latest/src/conf.py',
+        )
+
+    @patch('readthedocs.projects.models.Project.find')
+    def test_multiple_conf_file_one_doc_in_path(self, find_method):
+        find_method.return_value = [
+            '/home/docs/rtfd/code/readthedocs.org/user_builds/pip/checkouts/latest/src/conf.py',
+            '/home/docs/rtfd/code/readthedocs.org/user_builds/pip/checkouts/latest/docs/conf.py',
+        ]
+        self.assertEqual(
+            self.pip.conf_file(),
+            '/home/docs/rtfd/code/readthedocs.org/user_builds/pip/checkouts/latest/docs/conf.py',
+        )
+
+    def test_conf_file_not_found(self):
+        with self.assertRaisesMessage(
+                ProjectConfigurationError,
+                ProjectConfigurationError.NOT_FOUND) as cm:
+            self.pip.conf_file()
+
+    @patch('readthedocs.projects.models.Project.find')
+    def test_multiple_conf_files(self, find_method):
+        find_method.return_value = [
+            '/home/docs/rtfd/code/readthedocs.org/user_builds/pip/checkouts/multi-conf.py/src/conf.py',
+            '/home/docs/rtfd/code/readthedocs.org/user_builds/pip/checkouts/multi-conf.py/src/sub/conf.py',
+            '/home/docs/rtfd/code/readthedocs.org/user_builds/pip/checkouts/multi-conf.py/src/sub/src/conf.py',
+        ]
+        with self.assertRaisesMessage(
+                ProjectConfigurationError,
+                ProjectConfigurationError.MULTIPLE_CONF_FILES) as cm:
+            self.pip.conf_file()

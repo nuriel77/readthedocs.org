@@ -1,27 +1,31 @@
-"""Gold subscription views"""
+# -*- coding: utf-8 -*-
+"""Gold subscription views."""
 
-from __future__ import absolute_import
-from django.core.urlresolvers import reverse, reverse_lazy
+from __future__ import (
+    absolute_import, division, print_function, unicode_literals)
+
 from django.conf import settings
-from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib import messages
-from django.http import HttpResponseRedirect
-from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.contrib.messages.views import SuccessMessageMixin
+from django.core.urlresolvers import reverse, reverse_lazy
+from django.http import HttpResponseRedirect
+from django.shortcuts import get_object_or_404, render
 from django.utils.translation import ugettext_lazy as _
-from vanilla import DeleteView, UpdateView, DetailView
+from vanilla import DeleteView, DetailView, UpdateView
 
 from readthedocs.core.mixins import LoginRequiredMixin
-from readthedocs.projects.models import Project, Domain
 from readthedocs.payments.mixins import StripeMixin
+from readthedocs.projects.models import Domain, Project
 
-from .forms import GoldSubscriptionForm, GoldProjectForm
+from .forms import GoldProjectForm, GoldSubscriptionForm
 from .models import GoldUser
 
 
-class GoldSubscriptionMixin(SuccessMessageMixin, StripeMixin, LoginRequiredMixin):
+class GoldSubscriptionMixin(SuccessMessageMixin, StripeMixin,
+                            LoginRequiredMixin):
 
-    """Gold subscription mixin for view classes"""
+    """Gold subscription mixin for view classes."""
 
     model = GoldUser
     form_class = GoldSubscriptionForm
@@ -33,16 +37,16 @@ class GoldSubscriptionMixin(SuccessMessageMixin, StripeMixin, LoginRequiredMixin
             return None
 
     def get_form(self, data=None, files=None, **kwargs):
-        """Pass in copy of POST data to avoid read only QueryDicts"""
+        """Pass in copy of POST data to avoid read only QueryDicts."""
         kwargs['customer'] = self.request.user
-        return super(GoldSubscriptionMixin, self).get_form(data, files, **kwargs)
+        return super(GoldSubscriptionMixin,
+                     self).get_form(data, files, **kwargs)
 
     def get_success_url(self, **__):
         return reverse_lazy('gold_detail')
 
     def get_template_names(self):
-        return ('gold/subscription{0}.html'
-                .format(self.template_name_suffix))
+        return ('gold/subscription{0}.html'.format(self.template_name_suffix))
 
     def get_context_data(self, **kwargs):
         context = super(GoldSubscriptionMixin, self).get_context_data(**kwargs)
@@ -50,13 +54,15 @@ class GoldSubscriptionMixin(SuccessMessageMixin, StripeMixin, LoginRequiredMixin
         context['domains'] = domains
         return context
 
+
 # Subscription Views
 
 
 class DetailGoldSubscription(GoldSubscriptionMixin, DetailView):
 
     def get(self, request, *args, **kwargs):
-        """GET handling for this view
+        """
+        GET handling for this view.
 
         If there is a gold subscription instance, then we show the normal detail
         page, otherwise show the registration form
@@ -73,7 +79,8 @@ class UpdateGoldSubscription(GoldSubscriptionMixin, UpdateView):
 
 class DeleteGoldSubscription(GoldSubscriptionMixin, DeleteView):
 
-    """Delete Gold subscription view
+    """
+    Delete Gold subscription view.
 
     On object deletion, the corresponding Stripe customer is deleted as well.
     Deletion is triggered on subscription deletion using a signal, ensuring the
@@ -83,8 +90,9 @@ class DeleteGoldSubscription(GoldSubscriptionMixin, DeleteView):
     success_message = _('Your subscription has been cancelled')
 
     def post(self, request, *args, **kwargs):
-        """Add success message to delete post"""
-        resp = super(DeleteGoldSubscription, self).post(request, *args, **kwargs)
+        """Add success message to delete post."""
+        resp = super(DeleteGoldSubscription,
+                     self).post(request, *args, **kwargs)
         success_message = self.get_success_message({})
         if success_message:
             messages.success(self.request, success_message)
@@ -97,7 +105,8 @@ def projects(request):
     gold_projects = gold_user.projects.all()
 
     if request.method == 'POST':
-        form = GoldProjectForm(data=request.POST, user=gold_user, projects=gold_projects)
+        form = GoldProjectForm(
+            data=request.POST, user=gold_user, projects=gold_projects)
         if form.is_valid():
             to_add = Project.objects.get(slug=form.cleaned_data['project'])
             gold_user.projects.add(to_add)
@@ -105,15 +114,14 @@ def projects(request):
     else:
         form = GoldProjectForm()
 
-    return render(request,
-                  'gold/projects.html',
-                  {
-                      'form': form,
-                      'gold_user': gold_user,
-                      'publishable': settings.STRIPE_PUBLISHABLE,
-                      'user': request.user,
-                      'projects': gold_projects
-                  })
+    return render(
+        request, 'gold/projects.html', {
+            'form': form,
+            'gold_user': gold_user,
+            'publishable': settings.STRIPE_PUBLISHABLE,
+            'user': request.user,
+            'projects': gold_projects,
+        })
 
 
 @login_required
